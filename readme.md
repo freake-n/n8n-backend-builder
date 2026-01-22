@@ -1,4 +1,4 @@
-# 🧱 n8n Backend Builder
+# ![n8n](https://avatars.githubusercontent.com/u/45487711?s=48&v=4) n8n Backend Builder
 ### No-Code Backend-as-a-Service (Local & Free)
 
 ![n8n](https://img.shields.io/badge/n8n-Workflow_Engine-ff6d5a?style=flat-square&logo=n8n)
