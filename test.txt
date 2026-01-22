@@ -1,0 +1,98 @@
+01:
+
+PS C:\Windows\system32> Invoke-RestMethod `
+>> -Uri "http://localhost:5678/webhook-test/auth/login" `
+>> -Method POST `
+>> -ContentType "application/json" `
+>> -Body (@{
+>> username = "demo"
+>> password = "demo123"
+>> } | ConvertTo-Json)
+
+
+success : True
+token : eyJ1c2VySWQiOjEsInVzZXJuYW1lIjoiZGVtbyIsImVtYWlsIjoiZGVtb0BleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2OTA3ODIxOSwiZXhwIjoxNzY5MDgxODE5fQ=
+=
+expiresIn : 3600
+tokenType : Bearer
+user : @{id=1; username=demo; email=demo@example.com; role=admin}
+
+
+
+
+02:
+
+PS C:\Windows\system32> $token = "eyJ1c2VySWQiOjEsInVzZXJuYW1lIjoiZGVtbyIsImVtYWlsIjoiZGVtb0BleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2OTA3ODIxOSwiZXhwIjoxNzY5MDgxODE5fQ=="
+>> Invoke-RestMethod `
+>> -Uri "http://localhost:5678/webhook-test/api/todo" `
+>> -Method POST `
+>> -ContentType "application/json" `
+>> -Headers @{ Authorization = ("Bearer " + $token) } `
+>> -Body (@{
+>> title = "My First API Task"
+>> priority = "high"
+>> } | ConvertTo-Json)
+
+success message data
+------- ------- ----
+True Todo created successfully @{id=8; title=My First API Task; description=; completed=False; due_date=; priority=high; user_id=1; created_at=2026-0...
+
+
+
+
+
+03:
+
+PS C:\Windows\system32> Invoke-RestMethod `
+>> -Uri "http://localhost:5678/webhook-test/api/todo" `
+>> -Method GET `
+>> -Headers @{ Authorization = ("Bearer " + $token) }
+
+success data
+------- ----
+True {@{id=3; title=Create CRUD endpoints; description=Build Create, Read, Update, Delete workflows; completed=False; due_date=2026-01-25T00:00:00.00...
+
+
+
+
+
+04:
+
+PS C:\Windows\system32> Invoke-RestMethod `
+>> -Uri "http://localhost:5678/webhook-test/update-todo-webhook/api/todo/8" `
+>> -Method PUT `
+>> -Headers @{ Authorization = ("Bearer " + $token) } `
+>> -Body (@{
+>> completed = $true
+>> title = "My First API Task (DONE!)"
+>> } | ConvertTo-Json)
+
+success message data
+------- ------- ----
+True Todo updated successfully @{id=1; title=Setup n8n backend; description=Configure n8n with PostgreSQL and Docker; completed=True; due_date=2026-0...
+
+
+
+
+
+
+05:
+
+PS C:\Windows\system32> Invoke-RestMethod `
+>> -Uri "http://localhost:5678/webhook-test/delete-todo-webhook/api/todo/1" `
+>> -Method DELETE `
+>> -Headers @{ Authorization = ("Bearer " + $token) }
+
+success message deletedId deletedTitle
+------- ------- --------- ------------
+True Todo deleted successfully 1 Setup n8n backend
+
+
+
+
+
+
+06:
+07:
+
+Both can be executed directly
