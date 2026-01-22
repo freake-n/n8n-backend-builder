@@ -1,0 +1,1777 @@
+{
+  "name": "Backend-builder",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🔐 1. Authentication Service\nHandles user login, password verification, and JWT issuance.",
+        "height": 428,
+        "width": 1400
+      },
+      "id": "29492dc2-4ae8-4985-adb7-95593eb81557",
+      "name": "Note - Auth",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📝 2. Create Task (POST)\nValidates schema and inserts new todos into DB.",
+        "height": 444,
+        "width": 1712,
+        "color": 2
+      },
+      "id": "094d4e0c-a9d6-4c6a-b4b6-b89fd89128f6",
+      "name": "Note - Create",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📋 3. List Tasks (GET)\nFetches user-specific data with search & filtering.",
+        "height": 428,
+        "width": 1432,
+        "color": 3
+      },
+      "id": "57016742-422a-4e45-80e3-c1ec19435aeb",
+      "name": "Note - Read",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        1456
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ✏️ 4. Update Task (PUT)\nChecks ownership and modifies existing records.",
+        "height": 444,
+        "width": 1792,
+        "color": 4
+      },
+      "id": "5e5edadc-b86f-418a-bb9a-91cab3f4c7ce",
+      "name": "Note - Update",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🗑️ 5. Delete Task (DELETE)\nPermanently removes records.",
+        "height": 476,
+        "width": 1808,
+        "color": 5
+      },
+      "id": "fd2cbad4-d2e4-49ad-be69-ca8a5491fdb6",
+      "name": "Note - Delete",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📊 6. Analytics & Logging\nbackground service to track API usage.",
+        "height": 380,
+        "width": 1544,
+        "color": 6
+      },
+      "id": "4d408616-70db-443b-8935-3e44bc2d172a",
+      "name": "Note - Logs",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        2960
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🛡️ 7. Rate Limiter Middleware\nPrevents abuse by blocking frequent requests.",
+        "height": 444,
+        "width": 1672
+      },
+      "id": "89428ae8-904e-415c-80e8-fa350a65dcb9",
+      "name": "Note - Limit",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        3456
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "auth/login",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5a284841-6911-4093-9e69-54eaad6a48d3",
+      "name": "Webhook - Login",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -192,
+        608
+      ],
+      "webhookId": "auth-login-webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, username, password_hash, role, email FROM users WHERE username = $1 AND is_active = true",
+        "options": {
+          "queryReplacement": "={{ $json.body.username }}"
+        }
+      },
+      "id": "57cd7f41-4be3-46e6-a343-87dbabda8c88",
+      "name": "Check User Exists",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        32,
+        608
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "condition-user-exists",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cbb0f9cd-2a05-474d-9135-3db5bfef5e75",
+      "name": "User Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        256,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get user data from database query\nconst userData = $input.first().json;\n\n// Get password from webhook request body\nconst webhookData = $node[\"Webhook - Login\"].json;\nconst inputPassword = webhookData.body?.password || '';\n\n// Simple password validation (in production, use bcrypt)\n// Demo password is 'demo123' for all users\nconst isValidPassword = inputPassword === 'demo123';\n\nif (!isValidPassword) {\n  return {\n    json: {\n      success: false,\n      error: 'Invalid credentials',\n      code: 'INVALID_CREDENTIALS'\n    }\n  };\n}\n\n// Generate JWT payload\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  userId: userData.id,\n  username: userData.username,\n  email: userData.email,\n  role: userData.role,\n  iat: now,\n  exp: now + (60 * 60) // 1 hour expiration\n};\n\n// Simple base64 encoding for demo (use proper JWT library in production)\nconst token = Buffer.from(JSON.stringify(payload)).toString('base64');\n\nreturn {\n  json: {\n    success: true,\n    token: token,\n    expiresIn: 3600,\n    tokenType: 'Bearer',\n    user: {\n      id: userData.id,\n      username: userData.username,\n      email: userData.email,\n      role: userData.role\n    }\n  }\n};"
+      },
+      "id": "d5ac9a17-91ed-44ce-8397-f1518c11ee13",
+      "name": "Validate & Generate JWT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "f47b346b-c1f6-4b26-b360-7459744a7194",
+      "name": "Response - Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: 'Invalid username or password', code: 'INVALID_CREDENTIALS' } }}",
+        "options": {}
+      },
+      "id": "77a1bf8a-b64e-42ea-9175-9e1fb4fef01e",
+      "name": "Response - Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        528,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/todo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d7506cd4-c032-4083-84fb-3019a952f6a3",
+      "name": "Webhook - Create Todo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -192,
+        1120
+      ],
+      "webhookId": "create-todo-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate JWT token from Authorization header\nconst headers = $input.first().json.headers;\nconst authHeader = headers.authorization || headers.Authorization;\n\n// Check if Authorization header exists\nif (!authHeader) {\n  return {\n    json: {\n      authenticated: false,\n      error: 'No authorization header provided',\n      code: 'NO_AUTH_HEADER'\n    }\n  };\n}\n\n// Check Bearer format\nif (!authHeader.startsWith('Bearer ')) {\n  return {\n    json: {\n      authenticated: false,\n      error: 'Invalid authorization format. Use: Bearer <token>',\n      code: 'INVALID_AUTH_FORMAT'\n    }\n  };\n}\n\n// Extract token\nconst token = authHeader.replace('Bearer ', '').trim();\n\ntry {\n  // Decode JWT (base64 for demo)\n  const payload = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));\n  \n  // Check expiration\n  const now = Math.floor(Date.now() / 1000);\n  if (payload.exp && payload.exp < now) {\n    return {\n      json: {\n        authenticated: false,\n        error: 'Token expired. Please login again.',\n        code: 'TOKEN_EXPIRED'\n      }\n    };\n  }\n  \n  // Return authenticated user data\n  return {\n    json: {\n      authenticated: true,\n      userId: payload.userId,\n      username: payload.username,\n      role: payload.role\n    }\n  };\n  \n} catch (error) {\n  return {\n    json: {\n      authenticated: false,\n      error: 'Invalid token format',\n      code: 'INVALID_TOKEN'\n    }\n  };\n}"
+      },
+      "id": "e55b170d-4942-48ef-9f36-fbdd439e4a13",
+      "name": "Validate JWT Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "auth-check-001",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "63792f2b-8b7a-4cb5-a023-0f4d778c9334",
+      "name": "Is Authenticated?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        256,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get request body from webhook\nconst webhookData = $node[\"Webhook - Create Todo\"].json;\nconst body = webhookData.body || {};\n\nconst errors = [];\n\n// Validate title\nif (!body.title || typeof body.title !== 'string') {\n  errors.push('Title is required and must be a string');\n} else if (body.title.trim().length === 0) {\n  errors.push('Title cannot be empty');\n} else if (body.title.length > 255) {\n  errors.push('Title must be less than 255 characters');\n}\n\n// Validate completed (optional)\nif (body.completed !== undefined && typeof body.completed !== 'boolean') {\n  errors.push('Completed must be a boolean (true or false)');\n}\n\n// Validate dueDate (optional)\nif (body.dueDate) {\n  const dateRegex = /^\\d{4}-\\d{2}-\\d{2}$/;\n  if (!dateRegex.test(body.dueDate)) {\n    errors.push('Due date must be in YYYY-MM-DD format (e.g., 2026-01-30)');\n  }\n}\n\n// Return validation result\nif (errors.length > 0) {\n  return {\n    json: {\n      valid: false,\n      errors: errors\n    }\n  };\n}\n\n// Get user ID from auth token\nconst authData = $node[\"Validate JWT Token\"].json;\n\nreturn {\n  json: {\n    valid: true,\n    title: body.title.trim(),\n    description: body.description || null,\n    completed: body.completed || false,\n    dueDate: body.dueDate || null,\n    priority: body.priority || 'medium',\n    userId: authData.userId\n  }\n};"
+      },
+      "id": "26b586f4-e425-4492-9fe5-2cedba22759c",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "valid-check-001",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5b4ffaf0-ced6-4e0a-adb0-b021963975ba",
+      "name": "Is Valid Input?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        736,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO todos (title, description, completed, due_date, priority, user_id)\nVALUES ($1, $2, $3, $4, $5, $6)\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.title }}{{ $json.description }}{{ $json.completed }}{{ $json.dueDate }}{{ $json.priority }}{{ $json.userId }}"
+        }
+      },
+      "id": "f45a7afd-8c07-484e-92b2-7207db6121e2",
+      "name": "Insert Todo to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1008,
+        992
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Todo created successfully', data: $json } }}",
+        "options": {}
+      },
+      "id": "37a89e35-3680-43df-9ffd-aca5c18115ab",
+      "name": "Response - Success (201)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1232,
+        992
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, errors: $json.errors } }}",
+        "options": {}
+      },
+      "id": "9bfac193-7f41-4b39-82c6-3a2a5fc7f693",
+      "name": "Response - Validation Error (400)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1008,
+        1168
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: $json.error || 'Unauthorized', code: $json.code || 'UNAUTHORIZED' } }}",
+        "options": {}
+      },
+      "id": "e29729d3-a41e-44fc-989f-b5dc4564d648",
+      "name": "Response - Auth Error (401)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "path": "api/todo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "829ea0de-00db-4b04-8434-dd50607d8f2d",
+      "name": "Webhook - List Todos",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -192,
+        1616
+      ],
+      "webhookId": "list-todos-webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  id,\n  title,\n  description,\n  completed,\n  due_date,\n  priority,\n  created_at,\n  updated_at\nFROM todos \nWHERE user_id = $1 \nORDER BY \n  CASE WHEN completed = false THEN 0 ELSE 1 END,\n  due_date ASC NULLS LAST,\n  created_at DESC\nLIMIT 100",
+        "options": {
+          "queryReplacement": "={{ $json.userId }}{{ $json.username }}{{ $json.role }}"
+        }
+      },
+      "id": "949cb6a4-6f13-4e94-985d-5cfb448efcd5",
+      "name": "Get User Todos",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        528,
+        1552
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all todos from database\nconst todos = $input.all().map(item => item.json);\n\n// Get query parameters from webhook (for filtering)\nconst webhookData = $node[\"Webhook - List Todos\"].json;\nconst query = webhookData.query || {};\n\nlet filteredTodos = todos;\n\n// Filter by completed status if provided\nif (query.completed !== undefined) {\n  const completedFilter = query.completed === 'true' || query.completed === true;\n  filteredTodos = filteredTodos.filter(todo => todo.completed === completedFilter);\n}\n\n// Filter by priority if provided\nif (query.priority) {\n  filteredTodos = filteredTodos.filter(todo => \n    todo.priority?.toLowerCase() === query.priority.toLowerCase()\n  );\n}\n\n// Search in title if provided\nif (query.search) {\n  const searchTerm = query.search.toLowerCase();\n  filteredTodos = filteredTodos.filter(todo => \n    todo.title?.toLowerCase().includes(searchTerm) ||\n    todo.description?.toLowerCase().includes(searchTerm)\n  );\n}\n\n// Calculate statistics\nconst stats = {\n  total: filteredTodos.length,\n  completed: filteredTodos.filter(t => t.completed).length,\n  pending: filteredTodos.filter(t => !t.completed).length,\n  overdue: filteredTodos.filter(t => {\n    if (!t.due_date || t.completed) return false;\n    return new Date(t.due_date) < new Date();\n  }).length\n};\n\nreturn {\n  json: {\n    success: true,\n    data: filteredTodos,\n    count: filteredTodos.length,\n    stats: stats\n  }\n};"
+      },
+      "id": "8380eebe-89d2-4202-be05-6526644c3657",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        1552
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate JWT token from Authorization header\nconst headers = $input.first().json.headers;\nconst authHeader = headers.authorization || headers.Authorization;\n\nif (!authHeader) {\n  return {\n    json: {\n      authenticated: false,\n      error: 'No authorization header provided',\n      code: 'NO_AUTH_HEADER'\n    }\n  };\n}\n\nif (!authHeader.startsWith('Bearer ')) {\n  return {\n    json: {\n      authenticated: false,\n      error: 'Invalid authorization format. Use: Bearer <token>',\n      code: 'INVALID_AUTH_FORMAT'\n    }\n  };\n}\n\nconst token = authHeader.replace('Bearer ', '').trim();\n\ntry {\n  const payload = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));\n  \n  const now = Math.floor(Date.now() / 1000);\n  if (payload.exp && payload.exp < now) {\n    return {\n      json: {\n        authenticated: false,\n        error: 'Token expired. Please login again.',\n        code: 'TOKEN_EXPIRED'\n      }\n    };\n  }\n  \n  return {\n    json: {\n      authenticated: true,\n      userId: payload.userId,\n      username: payload.username,\n      role: payload.role\n    }\n  };\n  \n} catch (error) {\n  return {\n    json: {\n      authenticated: false,\n      error: 'Invalid token format',\n      code: 'INVALID_TOKEN'\n    }\n  };\n}"
+      },
+      "id": "7c795569-6e13-43c5-beee-cfe321d64080",
+      "name": "Validate JWT Token1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        1616
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "auth-check-read-001",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "528dcfe6-7658-490b-8ead-4d9c327ace98",
+      "name": "Is Authenticated?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        256,
+        1616
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "07ff39eb-8b64-4a9f-a6e2-d076c2922826",
+      "name": "Response - Success1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        976,
+        1552
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: $json.error || 'Unauthorized', code: $json.code || 'UNAUTHORIZED' } }}",
+        "options": {}
+      },
+      "id": "e300f07a-4b5b-47d7-98cc-1940e5249edc",
+      "name": "Response - Auth Error (401)1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        528,
+        1712
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "PUT",
+        "path": "api/todo/:id",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1994633c-c687-45c7-a83b-1595f4b4b02d",
+      "name": "Webhook - Update Todo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -192,
+        2112
+      ],
+      "webhookId": "update-todo-webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, user_id FROM todos WHERE id = $1",
+        "options": {
+          "queryReplacement": "={{ $node[\"Webhook - Update Todo\"].json.params.id }}"
+        }
+      },
+      "id": "60c734dc-a867-447f-b0ba-32723a012be6",
+      "name": "Check Todo Exists",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        496,
+        2048
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if todo exists and belongs to user\nconst todoData = $input.first().json;\nconst authData = $node[\"Validate JWT Token2\"].json;\nconst webhookData = $node[\"Webhook - Update Todo\"].json;\n\nif (!todoData || !todoData.id) {\n  return {\n    json: {\n      canUpdate: false,\n      error: 'Todo not found',\n      code: 'TODO_NOT_FOUND'\n    }\n  };\n}\n\n// Check ownership (unless admin)\nif (todoData.user_id !== authData.userId && authData.role !== 'admin') {\n  return {\n    json: {\n      canUpdate: false,\n      error: 'You do not have permission to update this todo',\n      code: 'FORBIDDEN'\n    }\n  };\n}\n\n// Validate update data\nconst body = webhookData.body || {};\nconst errors = [];\n\nif (body.title !== undefined) {\n  if (typeof body.title !== 'string') {\n    errors.push('Title must be a string');\n  } else if (body.title.trim().length === 0) {\n    errors.push('Title cannot be empty');\n  } else if (body.title.length > 255) {\n    errors.push('Title must be less than 255 characters');\n  }\n}\n\nif (body.completed !== undefined && typeof body.completed !== 'boolean') {\n  errors.push('Completed must be a boolean');\n}\n\nif (body.dueDate !== undefined && body.dueDate !== null) {\n  const dateRegex = /^\\d{4}-\\d{2}-\\d{2}$/;\n  if (!dateRegex.test(body.dueDate)) {\n    errors.push('Due date must be in YYYY-MM-DD format');\n  }\n}\n\nif (errors.length > 0) {\n  return {\n    json: {\n      canUpdate: false,\n      errors: errors\n    }\n  };\n}\n\nreturn {\n  json: {\n    canUpdate: true,\n    todoId: todoData.id,\n    updates: {\n      title: body.title,\n      description: body.description,\n      completed: body.completed,\n      dueDate: body.dueDate,\n      priority: body.priority\n    }\n  }\n};"
+      },
+      "id": "c7490bf1-4bf3-4c05-b6f0-574c8ceed51f",
+      "name": "Validate Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        2048
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "can-update-check",
+              "leftValue": "={{ $json.canUpdate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4c93a163-43f3-4742-97e1-58589aed022b",
+      "name": "Can Update?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        896,
+        2048
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate JWT token\nconst headers = $input.first().json.headers;\nconst authHeader = headers.authorization || headers.Authorization;\n\nif (!authHeader) {\n  return {\n    json: {\n      authenticated: false,\n      error: 'No authorization header provided',\n      code: 'NO_AUTH_HEADER'\n    }\n  };\n}\n\nif (!authHeader.startsWith('Bearer ')) {\n  return {\n    json: {\n      authenticated: false,\n      error: 'Invalid authorization format',\n      code: 'INVALID_AUTH_FORMAT'\n    }\n  };\n}\n\nconst token = authHeader.replace('Bearer ', '').trim();\n\ntry {\n  const payload = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));\n  \n  const now = Math.floor(Date.now() / 1000);\n  if (payload.exp && payload.exp < now) {\n    return {\n      json: {\n        authenticated: false,\n        error: 'Token expired',\n        code: 'TOKEN_EXPIRED'\n      }\n    };\n  }\n  \n  return {\n    json: {\n      authenticated: true,\n      userId: payload.userId,\n      username: payload.username,\n      role: payload.role\n    }\n  };\n  \n} catch (error) {\n  return {\n    json: {\n      authenticated: false,\n      error: 'Invalid token',\n      code: 'INVALID_TOKEN'\n    }\n  };\n}"
+      },
+      "id": "dc55a10c-f5b1-4514-a67e-40927dd123c9",
+      "name": "Validate JWT Token2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        2112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "auth-check-update",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "10d25fc1-a3b6-4049-ac55-66ade341386a",
+      "name": "Is Authenticated?2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        256,
+        2112
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Todo updated successfully', data: $json } }}",
+        "options": {}
+      },
+      "id": "dd0f9b3f-5b9d-44a8-a3cf-e05a1efb89ea",
+      "name": "Response - Success2",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1328,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: $json.error, code: $json.code, errors: $json.errors } }}",
+        "options": {}
+      },
+      "id": "b3671d86-7aa5-415a-b991-e4752bbd6e7f",
+      "name": "Response - Error1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1136,
+        2192
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: $json.error || 'Unauthorized', code: $json.code || 'UNAUTHORIZED' } }}",
+        "options": {}
+      },
+      "id": "2ab0b34b-109b-49da-b126-4966f90dd66d",
+      "name": "Response - Auth Error (401)2",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        2240
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "api/todo/:id",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "44548221-66ae-4fe6-80c1-fef3ae8ef1ad",
+      "name": "Webhook - Delete Todo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -192,
+        2608
+      ],
+      "webhookId": "delete-todo-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if todo exists and user has permission to delete\nconst todoData = $input.first().json;\nconst authData = $node[\"Validate JWT Token3\"].json;\nconst webhookData = $node[\"Webhook - Delete Todo\"].json;\nconst todoId = webhookData.params?.id;\n\nif (!todoData || !todoData.id) {\n  return {\n    json: {\n      canDelete: false,\n      error: 'Todo not found',\n      code: 'TODO_NOT_FOUND',\n      statusCode: 404\n    }\n  };\n}\n\n// Check ownership (unless admin)\nif (todoData.user_id !== authData.userId && authData.role !== 'admin') {\n  return {\n    json: {\n      canDelete: false,\n      error: 'You do not have permission to delete this todo',\n      code: 'FORBIDDEN',\n      statusCode: 403\n    }\n  };\n}\n\nreturn {\n  json: {\n    canDelete: true,\n    todoId: parseInt(todoId),\n    todoTitle: todoData.title\n  }\n};"
+      },
+      "id": "1dcf9e34-500a-435f-a241-b8ab6dc1200f",
+      "name": "Validate Delete Permission",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        2560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "can-delete-check",
+              "leftValue": "={{ $json.canDelete }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "06e6337b-1711-4215-adb1-923983582ea5",
+      "name": "Can Delete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        896,
+        2560
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM todos WHERE id = $1 RETURNING id, title",
+        "options": {
+          "queryReplacement": "={{ $json.todoId }}"
+        }
+      },
+      "id": "18e1698e-bc85-4d88-b4b9-973fe939c5e7",
+      "name": "Delete Todo from DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1136,
+        2512
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate JWT token\nconst headers = $input.first().json.headers;\nconst authHeader = headers.authorization || headers.Authorization;\n\nif (!authHeader || !authHeader.startsWith('Bearer ')) {\n  return {\n    json: {\n      authenticated: false,\n      error: 'No authorization header provided',\n      code: 'NO_AUTH_HEADER'\n    }\n  };\n}\n\nconst token = authHeader.replace('Bearer ', '').trim();\n\ntry {\n  const payload = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));\n  \n  const now = Math.floor(Date.now() / 1000);\n  if (payload.exp && payload.exp < now) {\n    return {\n      json: {\n        authenticated: false,\n        error: 'Token expired',\n        code: 'TOKEN_EXPIRED'\n      }\n    };\n  }\n  \n  return {\n    json: {\n      authenticated: true,\n      userId: payload.userId,\n      username: payload.username,\n      role: payload.role\n    }\n  };\n  \n} catch (error) {\n  return {\n    json: {\n      authenticated: false,\n      error: 'Invalid token',\n      code: 'INVALID_TOKEN'\n    }\n  };\n}"
+      },
+      "id": "915a0af8-92c7-4418-bde5-ba082f898554",
+      "name": "Validate JWT Token3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        2608
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "auth-check-delete",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8577f665-ec8a-470e-af43-d378a8848a7d",
+      "name": "Is Authenticated?3",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        256,
+        2608
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, title, user_id FROM todos WHERE id = $1",
+        "options": {
+          "queryReplacement": "={{ $node[\"Webhook - Delete Todo\"].json.params.id }}"
+        }
+      },
+      "id": "f82eb1ae-6a4f-4f7c-81bf-26399dc3af0d",
+      "name": "Check Todo Exists1",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        496,
+        2560
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Todo deleted successfully', deletedId: $json.id, deletedTitle: $json.title } }}",
+        "options": {}
+      },
+      "id": "08553879-6f0e-458a-99e9-f6e9ea581d03",
+      "name": "Response - Success3",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1328,
+        2512
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: $json.error, code: $json.code } }}",
+        "options": {}
+      },
+      "id": "25afb409-9943-42cd-bf6c-afb379e624ff",
+      "name": "Response - Error2",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1136,
+        2688
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: $json.error || 'Unauthorized', code: $json.code || 'UNAUTHORIZED' } }}",
+        "options": {}
+      },
+      "id": "d56320b3-10fa-42d4-992a-a6d9491abab7",
+      "name": "Response - Auth Error (401)3",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        2736
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/10 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "9cf84c75-dd58-4a2f-ae15-e8d427f51c39",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -192,
+        3120
+      ],
+      "notes": "Runs every 10 minutes to generate sample logs"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate sample request log entries\n// In production, this would be called after each API request\n\nconst methods = ['GET', 'POST', 'PUT', 'DELETE'];\nconst endpoints = [\n  '/api/todo',\n  '/api/auth/login',\n  '/api/todo/1',\n  '/api/todo/2'\n];\nconst statusCodes = [200, 201, 400, 401, 404, 500];\nconst userIds = [1, 2, 3, null];\n\n// Generate 5-10 random log entries\nconst numLogs = Math.floor(Math.random() * 6) + 5;\nconst logs = [];\n\nfor (let i = 0; i < numLogs; i++) {\n  const statusCode = statusCodes[Math.floor(Math.random() * statusCodes.length)];\n  const isError = statusCode >= 400;\n  \n  logs.push({\n    endpoint: endpoints[Math.floor(Math.random() * endpoints.length)],\n    method: methods[Math.floor(Math.random() * methods.length)],\n    user_id: userIds[Math.floor(Math.random() * userIds.length)],\n    ip_address: `192.168.1.${Math.floor(Math.random() * 255)}`,\n    user_agent: 'curl/7.68.0',\n    status_code: statusCode,\n    response_time: Math.floor(Math.random() * 500) + 20,\n    error_message: isError ? 'Sample error message' : null,\n    request_body: JSON.stringify({ sample: 'data' }),\n    response_body: isError ? JSON.stringify({ error: 'Error occurred' }) : JSON.stringify({ success: true })\n  });\n}\n\nreturn logs.map(log => ({ json: log }));"
+      },
+      "id": "157c0b98-06ca-4e95-ac3a-74bea72c6ec7",
+      "name": "Generate Sample Logs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO request_logs (\n  endpoint,\n  method,\n  user_id,\n  ip_address,\n  user_agent,\n  status_code,\n  response_time,\n  error_message,\n  request_body,\n  response_body\n) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb)\nRETURNING id, created_at",
+        "options": {
+          "queryReplacement": "={{ $json.endpoint }}{{ $json.method }}{{ $json.user_id }}{{ $json.ip_address }}{{ $json.user_agent }}{{ $json.status_code }}{{ $json.response_time }}{{ $json.error_message }}{{ $json.request_body }}{{ $json.response_body }}"
+        }
+      },
+      "id": "7aefba2e-7985-423a-8bb0-74b2f861a6e2",
+      "name": "Insert Logs to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        256,
+        3120
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  endpoint,\n  method,\n  COUNT(*) as total_requests,\n  COUNT(DISTINCT user_id) as unique_users,\n  AVG(response_time)::numeric(10,2) as avg_response_time,\n  MAX(response_time) as max_response_time,\n  MIN(response_time) as min_response_time,\n  COUNT(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 END) as success_count,\n  COUNT(CASE WHEN status_code >= 400 THEN 1 END) as error_count,\n  (COUNT(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 END)::float / \n   NULLIF(COUNT(*), 0) * 100)::numeric(5,2) as success_rate_percent\nFROM request_logs\nWHERE created_at > NOW() - INTERVAL '1 hour'\nGROUP BY endpoint, method\nORDER BY total_requests DESC\nLIMIT 20",
+        "options": {
+          "queryReplacement": ""
+        }
+      },
+      "id": "344d722f-2383-4f8d-b759-cad53ec78d87",
+      "name": "Get Hourly Stats",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        448,
+        3120
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  endpoint,\n  status_code,\n  error_message,\n  COUNT(*) as error_count,\n  MAX(created_at) as last_occurrence\nFROM request_logs\nWHERE status_code >= 400\n  AND created_at > NOW() - INTERVAL '1 hour'\nGROUP BY endpoint, status_code, error_message\nORDER BY error_count DESC\nLIMIT 10",
+        "options": {
+          "queryReplacement": ""
+        }
+      },
+      "id": "7a7e6d5e-6208-4771-83b5-e264c4ff58d9",
+      "name": "Get Recent Errors",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        656,
+        3120
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM request_logs WHERE created_at < NOW() - INTERVAL '30 days'",
+        "options": {
+          "queryReplacement": ""
+        }
+      },
+      "id": "81aaa437-d25e-4885-bd30-4658f87f8dc9",
+      "name": "Cleanup Old Logs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        848,
+        3120
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format analytics summary\nconst stats = $node[\"Get Hourly Stats\"].json;\nconst errors = $node[\"Get Recent Errors\"].json;\nconst cleanup = $node[\"Cleanup Old Logs\"].json;\n\nconst summary = {\n  timestamp: new Date().toISOString(),\n  period: 'Last 1 hour',\n  analytics: stats,\n  topErrors: errors,\n  maintenance: {\n    oldLogsDeleted: cleanup.length || 0\n  }\n};\n\nconsole.log('=== API Analytics Summary ===');\nconsole.log(JSON.stringify(summary, null, 2));\n\nreturn { json: summary };"
+      },
+      "id": "77e0f29f-c6bf-47f3-b794-fdf8ecdb7feb",
+      "name": "Format Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        3120
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "422db843-4449-40dd-b576-fa36a744d7db",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        3616
+      ],
+      "notes": "In production, this would be called before each API request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simulate incoming request data\n// In production, this would come from actual API requests\n\nconst sampleRequests = [\n  { identifier: '192.168.1.100', endpoint: '/api/todo', type: 'ip' },\n  { identifier: '192.168.1.100', endpoint: '/api/todo', type: 'ip' },\n  { identifier: '192.168.1.101', endpoint: '/api/auth/login', type: 'ip' },\n  { identifier: 'user_1', endpoint: '/api/todo', type: 'user' },\n];\n\nconst request = sampleRequests[Math.floor(Math.random() * sampleRequests.length)];\n\nreturn {\n  json: {\n    identifier: request.identifier,\n    endpoint: request.endpoint,\n    type: request.type,\n    timestamp: new Date().toISOString(),\n    // Rate limit configuration\n    limits: {\n      perMinute: 60,\n      perHour: 1000\n    }\n  }\n};"
+      },
+      "id": "e35b9a10-282f-4d91-8522-d3ade450b68a",
+      "name": "Prepare Rate Limit Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        3616
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  COUNT(*) FILTER (WHERE window_start > NOW() - INTERVAL '1 minute') as requests_last_minute,\n  COUNT(*) FILTER (WHERE window_start > NOW() - INTERVAL '1 hour') as requests_last_hour\nFROM rate_limits\nWHERE identifier = $1 \n  AND endpoint = $2",
+        "options": {
+          "queryReplacement": "={{ $json.identifier }}{{ $json.endpoint }}"
+        }
+      },
+      "id": "b9348e3c-4ab9-40ee-a43b-04c2cf836304",
+      "name": "Count Recent Requests",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        256,
+        3616
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if rate limits are exceeded\nconst counts = $input.first().json;\nconst config = $node[\"Prepare Rate Limit Check\"].json;\n\nconst requestsLastMinute = parseInt(counts.requests_last_minute || 0);\nconst requestsLastHour = parseInt(counts.requests_last_hour || 0);\n\nconst minuteLimitExceeded = requestsLastMinute >= config.limits.perMinute;\nconst hourLimitExceeded = requestsLastHour >= config.limits.perHour;\n\nconst blocked = minuteLimitExceeded || hourLimitExceeded;\n\nlet reason = null;\nlet retryAfter = null;\n\nif (minuteLimitExceeded) {\n  reason = `Rate limit exceeded: ${config.limits.perMinute} requests per minute`;\n  retryAfter = 60; // Retry after 60 seconds\n} else if (hourLimitExceeded) {\n  reason = `Rate limit exceeded: ${config.limits.perHour} requests per hour`;\n  retryAfter = 3600; // Retry after 1 hour\n}\n\nreturn {\n  json: {\n    blocked: blocked,\n    allowed: !blocked,\n    identifier: config.identifier,\n    endpoint: config.endpoint,\n    reason: reason,\n    retryAfter: retryAfter,\n    currentUsage: {\n      lastMinute: requestsLastMinute,\n      lastHour: requestsLastHour,\n      limits: config.limits\n    },\n    remaining: {\n      perMinute: Math.max(0, config.limits.perMinute - requestsLastMinute),\n      perHour: Math.max(0, config.limits.perHour - requestsLastHour)\n    }\n  }\n};"
+      },
+      "id": "067eadf0-23ec-4107-8da0-9d2d839dc9b4",
+      "name": "Check If Limit Exceeded",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        3616
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "allowed-check",
+              "leftValue": "={{ $json.allowed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5c8cb3c3-44d1-4fb0-b7f6-0649b4bb3489",
+      "name": "Is Request Allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        704,
+        3616
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO rate_limits (identifier, endpoint, request_count, window_start, window_end)\nVALUES ($1, $2, 1, NOW(), NOW() + INTERVAL '1 hour')\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.identifier }}{{ $json.endpoint }}"
+        }
+      },
+      "id": "75af770a-f90d-41f3-9457-efb5981c5714",
+      "name": "Record Request",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        896,
+        3520
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Request allowed - proceed\nconst limitInfo = $node[\"Check If Limit Exceeded\"].json;\n\nreturn {\n  json: {\n    allowed: true,\n    message: 'Request allowed',\n    rateLimit: {\n      remaining: limitInfo.remaining,\n      reset: new Date(Date.now() + 60000).toISOString()\n    }\n  }\n};"
+      },
+      "id": "f06eea8b-e21a-416c-a5eb-eb07c6408e98",
+      "name": "Allow Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        3520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Request blocked - return error\nconst limitInfo = $input.first().json;\n\nreturn {\n  json: {\n    allowed: false,\n    statusCode: 429,\n    error: 'Too Many Requests',\n    message: limitInfo.reason,\n    retryAfter: limitInfo.retryAfter,\n    currentUsage: limitInfo.currentUsage\n  }\n};"
+      },
+      "id": "7e12fafa-c917-42d1-a229-faa64a8cb9bd",
+      "name": "Block Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        3712
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM rate_limits WHERE window_end < NOW() - INTERVAL '1 hour'",
+        "options": {}
+      },
+      "id": "d5ee2569-9056-4183-82fa-3fe4bdbd3247",
+      "name": "Cleanup Old Records",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1136,
+        3712
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE todos SET \n  title = COALESCE($2, title),\n  description = COALESCE($3, description),\n  completed = COALESCE($4, completed),\n  due_date = COALESCE($5, due_date),\n  priority = COALESCE($6, priority),\n  updated_at = CURRENT_TIMESTAMP\nWHERE id = $1\nRETURNING *",
+        "options": {
+          "queryReplacement": "={{ $json.todoId }}{{ $json.updates.title }}{{ $json.updates.description }}{{ $json.updates.completed }}{{ $json.updates.dueDate }}{{ $json.updates.priority }}"
+        }
+      },
+      "id": "66ae04e3-5fc6-4d16-8aad-df0cba9c071d",
+      "name": "Update Todo in DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1136,
+        2016
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "74DO0GMatO9uqEHR",
+          "name": "PostgreSQL n8n Backend"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Login": {
+      "main": [
+        [
+          {
+            "node": "Check User Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check User Exists": {
+      "main": [
+        [
+          {
+            "node": "User Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User Found?": {
+      "main": [
+        [
+          {
+            "node": "Validate & Generate JWT",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Generate JWT": {
+      "main": [
+        [
+          {
+            "node": "Response - Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Create Todo": {
+      "main": [
+        [
+          {
+            "node": "Validate JWT Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate JWT Token": {
+      "main": [
+        [
+          {
+            "node": "Is Authenticated?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Authenticated?": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Auth Error (401)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid Input?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid Input?": {
+      "main": [
+        [
+          {
+            "node": "Insert Todo to DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Validation Error (400)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Todo to DB": {
+      "main": [
+        [
+          {
+            "node": "Response - Success (201)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - List Todos": {
+      "main": [
+        [
+          {
+            "node": "Validate JWT Token1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Todos": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Response - Success1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate JWT Token1": {
+      "main": [
+        [
+          {
+            "node": "Is Authenticated?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Authenticated?1": {
+      "main": [
+        [
+          {
+            "node": "Get User Todos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Auth Error (401)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Update Todo": {
+      "main": [
+        [
+          {
+            "node": "Validate JWT Token2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Todo Exists": {
+      "main": [
+        [
+          {
+            "node": "Validate Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Update": {
+      "main": [
+        [
+          {
+            "node": "Can Update?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Update?": {
+      "main": [
+        [
+          {
+            "node": "Update Todo in DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Error1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate JWT Token2": {
+      "main": [
+        [
+          {
+            "node": "Is Authenticated?2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Authenticated?2": {
+      "main": [
+        [
+          {
+            "node": "Check Todo Exists",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Auth Error (401)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Delete Todo": {
+      "main": [
+        [
+          {
+            "node": "Validate JWT Token3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Delete Permission": {
+      "main": [
+        [
+          {
+            "node": "Can Delete?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Delete?": {
+      "main": [
+        [
+          {
+            "node": "Delete Todo from DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Error2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Todo from DB": {
+      "main": [
+        [
+          {
+            "node": "Response - Success3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate JWT Token3": {
+      "main": [
+        [
+          {
+            "node": "Is Authenticated?3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Authenticated?3": {
+      "main": [
+        [
+          {
+            "node": "Check Todo Exists1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Auth Error (401)3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Todo Exists1": {
+      "main": [
+        [
+          {
+            "node": "Validate Delete Permission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Generate Sample Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Sample Logs": {
+      "main": [
+        [
+          {
+            "node": "Insert Logs to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Logs to DB": {
+      "main": [
+        [
+          {
+            "node": "Get Hourly Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Hourly Stats": {
+      "main": [
+        [
+          {
+            "node": "Get Recent Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recent Errors": {
+      "main": [
+        [
+          {
+            "node": "Cleanup Old Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleanup Old Logs": {
+      "main": [
+        [
+          {
+            "node": "Format Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Rate Limit Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Rate Limit Check": {
+      "main": [
+        [
+          {
+            "node": "Count Recent Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count Recent Requests": {
+      "main": [
+        [
+          {
+            "node": "Check If Limit Exceeded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Limit Exceeded": {
+      "main": [
+        [
+          {
+            "node": "Is Request Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Request Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Record Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Block Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Request": {
+      "main": [
+        [
+          {
+            "node": "Allow Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Block Request": {
+      "main": [
+        [
+          {
+            "node": "Cleanup Old Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Todo in DB": {
+      "main": [
+        [
+          {
+            "node": "Response - Success2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "93dc579c-abe9-4f78-962d-6ace7e4eef9b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "560ef943624683736cd6dd4970d81d818885db5a23229d8cf5d215444f3e83ee"
+  },
+  "id": "PCRtPIbHxmb3joCPofZs6",
+  "tags": []
+}
